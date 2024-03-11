@@ -1,0 +1,76 @@
+---
+format:
+  html:
+    embed-resources: true
+    code-fold: true
+title: Feedback
+---
+
+
+## Project Plans
+
+### Professor:
+
+- The professor’s feedback about the project plan was that they wished more subreddit data was incorporated into our final dataset. Their concern was that there was much more information about gentrification within other subreddits outside of the primary city subreddits. Their hopes were that these data from other subreddits might contribute additional context to analyzing the issue of gentrification. 
+
+- Given that we were unable to pull data from additional subreddits due to time and monetary constraints, we added narrative portions and additional information to our introduction that specified why we chose to only pull from these particular subreddits. 
+
+### Peer:
+
+- The main feedback focused on goals that seemed too unrealistic for the timeframe of the project. For example, analyzing the types of changes that lead to housing developments may not be possible with to answer with just the reddit data.
+
+- The change our group did was reformat our business questions to be more focused on what we actually accomplished, not just what we wish we had done.
+
+## EDA Work
+
+### Professor:
+
+- The main feedback about our EDA page was that it required more polishing and consistent formatting. They also mentioned that several plots had duplicative information, and that some did not seem relevant to the task of analyzing gentrification.
+
+- We incorporated this feedback by establishing a color theme for each of the cities. All throughout the notebook, each color would only correspond to one city for consistency and ease of reading. Additionally, we established color themes for our sentiment visualizations which were very prominent throughout the NLP section. We removed plots that did not contribute additional information to the analysis. 
+
+### Peer:
+
+- Our peers suggested reworking visualizations such as the bubble plot or heat map to be more user friendly. Also, picking better color palettes.
+
+- The change our group implemented was replacing some of the visualizations that were not telling a visual story. For the visualizations we decided to keep, we improved them by adding more labels or converting to `Plotly`. We also agreed on a standard color palette for all of us to use.
+
+## NLP Work
+
+### Professor:
+
+- Our professor’s main feedback was that there needed to be more narrative that would connect the sentiment predictions to the larger business goal of analyzing gentrification.
+
+- In order to incorporate this feedback, we added additional plots in order to analyze the sentiment predictions in the context of certain topics of gentrification, and additional narrative to connect our findings back to our original business goal. 
+
+### Peer:
+
+- Our peers were unable to provide feedback on the NLP work.
+
+## ML Work
+
+### Professor:
+
+- Our professor’s main feedback was that there needed to be more narrative that would connect the ML prediction to the larger business goal of analyzing gentrification.
+
+- In order to incorporate this feedback, we started off the introduction to the ML analysis with why we wanted to predict subreddit in the first place, and why that relates to gentrification.
+
+### Peer:
+
+- Our peers were unable to provide feedback on the ML work.
+
+## Website/Results
+
+### Professor:
+
+- Our professor’s main feedback was that we needed cleaner formatting to our website. They mentioned that we had inconsistent fonts, colors, and formats to text, and that navigating around the website was difficult.
+
+- To incorporate this, we turned some of our longer bullet points into tables, added more markdown formatting, and created more clearer delineation between each of our tabs. 
+
+### Peer:
+
+- Our peers recommended we use quarto rendering with code folding for the website to make it more visually appealing.
+
+- We implemented these changes using quarto. We developed individual notebooks and rendered them as a quarto website. We also incorporated code folding to hide the code while a user scrolls.
+
+

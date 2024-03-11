@@ -1,0 +1,40 @@
+---
+format:
+  html:
+    embed-resources: true
+    code-fold: true
+title: Conclusion
+---
+
+
+![](img\gentrif.jpg)
+
+*Image 1.People from Brooklyn expressing towards gentrification*
+
+
+Gentrification has a large, and often negative, impact on communities all over the United States. People at the most vulnerable levels of society experience the brunt of gentrification in the form of higher rent prices, construction, and displacement. Throughout our semester-long project, our group focused on exploring elements of gentrification using both Reddit data and U.S. Census data. We focused on four key cities for our analysis: **New York City, Washington, D.C., Seattle, and Atlanta.** During our exploratory analysis, we found that large technology oriented cities, like New York City and Seattle, had similar fluctuations in posts over time during the same time periods. Washington, D.C. and Atlanta, on the other hand, had fewer posts over time. 
+
+![](img\linegraph.png)
+
+
+When exploring the text content during the NLP phase of the project, one of the areas of exploration was sentiment analysis. Sentiment analysis allowed us to explore the emotion conveyed through the submission posts. We wanted to understand whether there were differences in sentiment across the city subreddits. We found that during 2022, all four city subreddits experienced higher counts of positive sentiment likely due to life going back to normal post-COVID.
+
+![](img\sentiment_count_bytime.png)
+
+Additionally, we analyzed sentiment within submissions that mention housing (e.g., rent, houses). We theorized that due to gentrification, these types of submissions would have higher instances of negative sentiment. The visualization below shows that the opposite was true: Across all four subreddits, posts with housing tended to have positive sentiment. Further research into the submissions would be needed to definitively conclude this finding, since there may be some posts that were removed due to community restrictions.
+
+![](img\rent_sentiment.png)
+
+Finally, at the end of our project, we conducted machine learning using SparkML. We tested two hypotheses: 
+
+- (1) Use machine learning to automatically identify the sentiment of the submissions.
+
+- (2) Use machine learning to automatically identify the city subreddit a submission belongs to. 
+
+Despite using both a Random Forest and Support Vector Machines, our results showed that without contextualized sentence embeddings, the models were unable to accurately identify the sentiment or subreddit. This can be improved in the future by incorporating pre-trained embeddings and more sophisticated models.
+
+Throughout the semester, we learned how to harness big data and use a variety of tools. The most obvious signs of gentrification are things like rent prices and transplants (i.e., people who move to cities from elsewhere in the country). We saw these topics reflected in our visualizations and data exploration. When it comes to using machine learning for big data, we learned that development can be done with smaller samples and later scaled up once the modeling pipeline is built out. We experienced resource constraints towards the end of the project and learned how to mitigate that better moving forward. Gentrification is a topic we will continue to explore because we believe it is important to understand the causes and effects it has on society.
+
+
+
+

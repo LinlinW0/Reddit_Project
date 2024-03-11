@@ -1,0 +1,69 @@
+---
+title: Problem
+format:
+  html:
+    embed-resources: true
+---
+
+## Analysis of Gentrification Based on Reddit data
+
+More than 135,000 people were displaced between 2000 and 2012 [^1] in the United States.
+
+**Gentrification** is a demographic and economic shift that displaces established working-class communities and communities of color in favor of wealthier newcomers and companies. Displacement happens when long-time or original neighborhood residents move from a gentrified area because of higher rents, mortgages, and property taxes. It is a housing, economic, and health issue that affects a community's history and culture.
+
+The majority of gentrification occurs as a result of a lack of policies that recognize community input, provide equitable redevelopment policies, and provide mindful housing options. Gentrification will continue to dismantle and displace lower-income communities unless policies are implemented to address the trends that cause forced displacement. To develop such policies, we must acknowledge gentrification's disproportionate and destructive effects.[^2]
+
+![](medellin.jpg)
+
+*Image 1. Picture from Medellin community expressing about gentrification*
+
+Analyzing data related to gentrification, especially people's opinions, is crucial to understand the real impact on communities. It provides insights into how residents are affected by rising costs and changes in their neighborhoods, focusing on the emotional and social aspects of the problem. Finally it can help to find solutions to ensure more equitable urban development.
+
+
+![](dc-front-page-gentrification.png)
+
+*Image 2. Article related to most gentrified cities in the U.S*
+
+## Objective
+The objective of this project is to analyze the opinions of Reddit users to understand how gentrification has impacted different cities in the United States. City subreddits are subreddits where residents can come together and form discourse regarding the city in which they live in. Many of us, for example, are likely members of the Washington, D.C. subreddit. While users may not necessarily mention gentrification directly, their discourse related to things like rent prices, new construction, Airbnb, and other topics are related to gentrification. To gain insight into any discourse related to city gentrification, our team decided to focus on city subreddits. A Study by the National Community Reinvestment Coalition reveals a list of the top cities with the highest percentage of gentrified neighborhoods between 2000 to 2013[^1]. Our team decided to focus on the following subreddits:
+
+1. New York, New York
+2. Atlanta, Georgia
+3. Washington, D.C.
+4. Seattle, Washington
+
+
+We focused on Washington, D.C. because that is the current city in which we live in and are familiar with. New York City is one of the largest, most popular cities in America and has undergone a tremendous amount of gentrification throughout the decades. Seattle, Washington was chosen because of our team's familiarity with the city and also because the tech industry (specifically Amazon and Microsoft headquarter locations) have caused the city to undergo gentrification. Finally, we chose Atlanta, Georgia because it was highly ranked in the list and it is in the southern United States.
+
+Sources:
+[^1]: Study by the National Community Reinvestment Coalition. March 2019. https://www.usnews.com/news/cities/slideshows/cities-with-the-highest-percentage-of-gentrified-neighborhoods.
+
+[^2]: Examining the Negative Impacts of Gentrification. September 2017. https://www.law.georgetown.edu/poverty-journal/blog/examining-the-negative-impacts-of-gentrification/.
+
+## Business & Technical Proposals
+
+| #   | Business Proposal                                       | Technical Proposal |
+| --- | ------------------------------------------------------- | ------------------- |
+| 1   | Do submission posts vary over time, by subreddit?        | Visualize frequency of submissions using a line graph. Break down the analysis by subreddit. |
+| 2   | How do submission lengths vary across the subreddits?     | Split the text into individual tokens and calculate the length of the tokens per submission. Plot a distribution plot to show the submission length distributions. |
+| 3   | Is sentiment of users' opinions on a city related to its rent prices? | Conduct sentiment analysis on Reddit posts using a transformer model. Compare sentiment scores with U.S. Census Bureau data on rent prices to identify correlations. |
+| 4   | Is sentiment of users' opinions on a city related to transportation and walkability? | Perform NLP techniques to extract information related to transportation and walkability from Reddit posts. |
+| 5   | Can we predict the subreddit based on the post content?| Apply NLP techniques to extract relevant information from Reddit posts. Use ML models to analyze the relationship between cities and post content. |
+| 6   | What topics related to gentrification have the most positive sentiment? | Apply NLP techniques to extract relevant information from Reddit posts and predict their sentiment using pre-trained models.|
+| 7  | Does the amount of responses within a subreddit correlate with the population of the city? | Analyze the data for patterns or relationships between subreddit responses and city population through correlation analysis.|
+| 8  | Do more gentrified cities have a more positive or negative sentiment towards short-term rentals? | Visualize the sentiment for post containing words related to short term rental. |
+| 9  |What are the most common topics across Subreddits? |Perform NLP techniques to extract information and generate a word-cloud using most frequent words.|
+| 10  |Do sentiment on posts vary over time, by subreddit? |Look for significant shifts in sentiment in response to specific events using time series analysis separating posts by thread.|
+
+## Methods
+
+The methods for recreating this project can be found over the next links:
+
+1. [Exploration and Analysis](https://corrinacalanoc.georgetown.domains/milestone1.html)
+1. [Natural Language Processing](https://corrinacalanoc.georgetown.domains/nlp.html)
+1. [Machine Learning](https://corrinacalanoc.georgetown.domains/ml.html)
+
+### Original questions:
+
+Questions that were not addressed in this project were related to median income, political beliefs,housing development, airbnb and tourism data. The reason to cut out the analysis related to that topics was that it deviate it from our original objective which was understanding the sentiment behind gentrification posts in reddit. For future work it would be interesting to search data that might contain sentiment related to those topics.
+

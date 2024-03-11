@@ -1,0 +1,18 @@
+---
+format:
+  html:
+    embed-resources: true
+    code-fold: true
+title: About
+---
+
+
+This website is a project for the DSAN-6000 Big Data and Cloud Computing Course.
+
+## Authors:
+* Corrina Calanoc <clc317@georgetown.edu>
+* Madelyne Ventura <mv790@georgetown.edu>
+* Valeria Vera <vv188@georgetown.edu>
+* Linlin Wang <lw849@georgetown.edu>
+
+

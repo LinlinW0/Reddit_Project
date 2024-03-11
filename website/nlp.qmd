@@ -1,0 +1,457 @@
+---
+format:
+  html:
+    embed-resources: true
+    code-fold: true
+title: NLP Analysis
+---
+
+## Introduction and Executive summary
+
+Natural Language Processing (NLP) techniques were critical in extracting insights from Reddit users' opinions on various aspects related to gentrification given our predefined business objectives. At the beginning of this analysis, we observed a significant reduction in the number of submissions, due to posts being unclean. Thus once again highlighting the importance of data cleaning and processing. We then dived into understanding the text distribution for subsequent NLP analysis, such as the top words in submissions by frequency. The analysis revealed that stopwords, frequently occurring but not contributing to meaning, dominated the results. To address this, we considered Term Frequency Inverse Document Frequency (TF-IDF) as a better measure. TF-IDF wordclouds displayed city names as prominent topics, along with location-related terms and inquiries about recommendations. Notably, words related to COVID-19 discourse appeared in some subreddit top words.
+
+One of the crucial elements in our business goals was understanding the sentiment of posts that dealt with topics revolving around gentrification. Although the some indicators of gentrification, such as rising rent prices, is generally viewed negatively, other indicators of gentrification might be positive sentiment towards things like *tourism*. For example, the following Reddit post about *tourism* seemts to have a positive sentiment:
+> *"Hi! I am planning to go on a mini vacation in DC in early August, and I was wondering if anyone had any suggestions for safe, young, and hip areas to stay in DC. If anyone has any recommendations for areas in DC I should stay in, I would love to hear from you! Thanks!"*
+
+And we can see the following Reddit post about *rent* has a negative sentiment:
+> *It's no shocking news to anyone paying even the slightest bit of attention that housing prices are rising at an incredible rate within the metro, and in particular the city itself. As someone who thought they were paying attention, though, it came as something of a shock to me to discover *just how fast* things were increasing. ... The city's own zoning policy proposal goes to great lengths to express the need for more housing to get costs under control And now Mayor Bottoms is talking about going even more conservative, using the same tired ([and rooted in both racism and calssim](https://old.reddit.com/r/Atlanta/comments/hyqxod/the_racist_origins_and_painful_legacy_of_atlantas/)) language of preserving neighborhood character. All while costs go up, the city stares at a massive infrastructure backlog caused in large part ([I suspect](https://www.reddit.com/r/Atlanta/comments/b58zth/the_city_of_atlanta_should_have_an_audit_but/)) by fiscally unsustainable sprawl, and that same sprawl causes more and more environmental damage to more and more of the metro as a whole. **It's bad policy that is more or less a perpetuation of the same shit that's gotten the metro in the mess it's in now, and it will continue to cause real harm for generations to come unless dealt with.** Not only should the City do better, but it should set the precedent for the rest of the metro while doing so, showcasing what can be done, and what should be done. Thank you for coming to my Ted Talk™. You may now yell at me in the comments."*
+
+In order to do this on a larger scale, sentiment analysis was used to determine the relationship between Reddit users' sentiment about a city and certain topics related to gentrification, such as tourism, walkability, and rent. The exploration showcased surprisingly a high number of negative comments compared to positive or neutral comments going from 30% to 60%. Furthermore, exploration techniques with external data were used to investigate whether there is any correlation betweeen median rent prices and sentiments on rent. Analyzing the sentiment of posts containing the word "rent" alongside rent prices per city, Atlanta stood out with a higher percentage of negative sentiment posts. Interestingly, New York, despite having the highest median rent prices, exhibited the lowest percentage of negative sentiment posts about "rent." Examining sentiment changes over time, Washington, DC, experienced a notable increase in negative posts about rent in 2023, indicating a shift in sentiment dynamics. Based on these analyses, it seems like the raw rent price did not have a strong correlation with negative sentiment but rather all cities' subreddits leaned towards having negative sentiment associated with rent.
+
+In summary, the analysis provides valuable insights into the trends, sentiments, and relationships within the Reddit data, laying the groundwork for further exploration and understanding of user opinions towards gentrification impacts, specially rent.
+
+
+
+## Analysis Report
+
+### Data collection
+
+The external data was collected as previously described on the EDA section by pulling the U.S. Census Bureau data on rent prices within these cities over the past few years. 
+
+The transformed data to produce the following visualizations can be downloaded by clicking [here](https://valeriavl.georgetown.domains/files/nlp_reddit_df.parquet).
+
+
+### Text exploration
+
+
+```{python}
+import pandas as pd
+import numpy as np
+import plotly.express as px
+import matplotlib.pyplot as plt
+import json
+import seaborn as sns
+import os
+import plotly.graph_objects as go
+import plotly.offline as pyo
+from plotly.offline import download_plotlyjs, init_notebook_mode, plot, iplot
+import datetime
+import nltk
+import requests
+import os
+import re
+import geopandas as gpd
+from pathlib import Path
+```
+
+We see a large reduction of submission rows due to the posts being empty, deleted, removed by moderators. The affected rows totaled nearly 174K. This provides insight into the trends of these subreddits because it shows that submissions being removed or deleted is not an uncommon occurrence. Additionally, there appears to be an issue with the fact that Reddit somehow allows submissions to be empty.
+
+
+```{python}
+reddit_df = pd.read_parquet("reddit_df.parquet")
+
+sub_df = reddit_df[reddit_df['selftext'].isin(['[deleted]', '[removed]', ''])]
+sub_df = pd.DataFrame(sub_df.groupby('selftext')['selftext'].count())
+sub_df.rename(columns={'selftext':'Count of Submissions'}, inplace = True)
+sub_df.reset_index(inplace = True)
+sub_df.rename(columns={'selftext':'Type'}, inplace = True)
+sub_df.loc[0, 'Type'] = 'Empty Submission'
+sub_df.loc[1, 'Type'] = 'Deleted Submission'
+sub_df.loc[2, 'Type'] = 'Removed Submission'
+sub_df
+
+
+fig = go.Figure(data=[go.Table(
+    header=dict(values=list(sub_df.columns),line_color='darkslategray',
+                fill_color='#d69f3c',
+                align='left'),
+    cells=dict(values=[sub_df['Type'], sub_df['Count of Submissions']],line_color='darkslategray',
+               fill_color='#f0d29c',
+               align='left')
+)])
+
+fig.update_layout(width=800, height=500)
+fig.update_layout(title='Cleaned submissions')
+fig.show()
+```
+
+
+Furthermore, we will analyze the distribution of the submission string lengths. Subreddit posts lengths can vary significantly depending on the author, topic, and subreddit. To get a better understanding of the text for the NLP analysis, we will take a look at the varying string lengths across different angles. Examples of different angles include the year and the subreddit. We create a column showing the length of the submission string. This column will then be used to show the varying distributions of the submission string lengths.
+
+In the following section, we are going to look at the top words in the submissions by frequency. Similar to the analysis above, this can be analyzed by looking at the top words across the subreddit type. Looking at the top words is essential in the preliminary text analysis because it may provide some insight into the topics discussed in the subreddit and hint at the types of sentiment in the data.
+
+Since this is a preliminary view of the text data, we will be using a simple strategy of splitting the text (e.g., whitespace, new line). After visualizing the top words in the subreddits, it became clear that the most frequent words are stop words. Stopwords are words that occur in text frequently, but do not contribute to the meaning of it. Examples of this include words like "And" and "The". This exploration result shows that to get meaningful insights of the text data, we will need to include stopword removal as part of the NLP pipeline conducted later on.
+
+A better way to measure the top words in a body if text is TF-IDF. Term Frequency Inverse Document Frequency (TF-IDF) measures the importance of a word by looking at the word's frequency relative to its document. If a word is truly important, it will appear more across documents, not just one. Since stopwords appeared frequently in the previous visualization, they will be excluded in this section and in the rest of the NLP analysis.
+
+![](wordcloud1.png)
+
+**Findings:** The wordclouds above display the top words in the subreddits according to TF-IDF. Words like "Recommendation", "Looking", "Know" and "Anyone" were among the top words as well because people inquire about recommendations pertaining to restaurants or events. City-specific words, such as "DMV" (D.C., Maryland, Virginia) in the Washington, D.C. and "Subway" for New York City appeared as well. Another interesting finding is that words such as "19" and "vaccine" appeared in some of the subreddit top words, likely due to discourse surrounding the COVID-19 pandemic. There appeared to be no words pertaining to things like rent, housing prices, or more. However, given the overwhelming words pertaining to people asking for recommendations, we believe that is a sign of gentrification because that indicates the vast amount of posters are people who are not local to the cities.
+
+### Sentiment prediction
+
+Furthermore, we predicted the sentiment of the different posts we have across Subreddits. Sentiment analysis can help to understand the sentiments and emotions expressed by residents of gentrified cities. This data is important for understanding how citizens perceive and feel about the changes taking place. Positive sentiments may indicate support for positive changes, economic growth, and improved infrastructure, whereas negative sentiments may reflect concerns about displacement, rising living costs, and changes to the community's culture.This can be useful for identifying emerging issues, and responding quickly to urban changes.
+
+```{python}
+reddit_nlp_df = pd.read_parquet("nlp_reddit_df.parquet")
+plot_df_all = reddit_nlp_df[['subreddit', 'sentiment']].copy()
+average_count = plot_df_all.groupby('subreddit')['sentiment'].count().reset_index()
+average_count_neg = plot_df_all[plot_df_all['sentiment'] == "['pos']"].groupby('subreddit')['sentiment'].count().reset_index()
+average_count_neg.columns = ["subreddit","pos_sentiment"]
+percentage_df = average_count[['subreddit', 'sentiment']].copy()
+percentage_df["pos_sentiment"] = average_count_neg["pos_sentiment"]
+percentage_df['percentage_pos'] = round((percentage_df['pos_sentiment'] / percentage_df['sentiment']) * 100,2)
+
+# Create a bar plot for the average percentages
+facet_colors = {
+    'nyc': '#7DDF64',
+    'washingtondc': '#FAA916',
+    'Seattle': '#822E81',
+    'Atlanta': '#ED4D6E'
+}
+
+percentage_df.columns = ["Subreddit","sentiment","pos_sentiment","percentage_pos"]
+
+fig = px.bar(percentage_df, x='Subreddit', y='percentage_pos',
+             labels={'percentage_pos': 'Percentage of Positive Sentiments'},
+             title='Percentage of Positive Sentiments of total Sentiments by Subreddit',
+             color='Subreddit', color_discrete_map=facet_colors,
+             text_auto=True, 
+             template="plotly_white")
+fig.update_traces(textposition='outside')
+fig.update_layout(height=500)
+fig.show()
+```
+
+The plot shows the percentage of positive comments by the total Subreddits. Although across reddit we don't expect to see a high number of negative comments since they can be removed by reddit moderators, most of the threads have minorities of positive sentiment. Atlanta is the only city with 5% more positive than negative comments meanwhile the Seattle, nyc and washingtondc Subreddits are under 50% indicating the majority of their posts have negative sentiment.
+
+### Sentiment over time
+
+```{python}
+import pandas as pd
+import plotly.express as px
+# read the parquet file
+# df = pd.read_parquet('/Users/linlinw/fall-2023-reddit-project-team-02/website/notebooks/nlp_reddit_df.parquet')
+df = reddit_nlp_df
+# only keep column domain, created_utc, sentiment
+df_sentiment = df[['domain', 'created_utc', 'sentiment']]
+# Convert 'created_utc' to datetime
+df_sentiment['created_utc'] = pd.to_datetime(df_sentiment['created_utc'])
+# Extract year and month
+df_sentiment['year_month'] = df_sentiment['created_utc'].dt.to_period('M')
+df_sentiment = df_sentiment[['domain', 'sentiment', 'year_month']]
+# extract data that domain = self.Seattle
+nyc_sentiment = df_sentiment[df_sentiment['domain'] == 'self.nyc']
+seattle_sentiment = df_sentiment[df_sentiment['domain'] == 'self.Seattle']
+dc_sentiment = df_sentiment[df_sentiment['domain'] == 'self.washingtondc']
+atlanta_sentiment = df_sentiment[df_sentiment['domain'] == 'self.Atlanta']
+nyc_count = nyc_sentiment.groupby("year_month")["sentiment"].apply(lambda x: x.apply(pd.Series).stack().value_counts()).unstack(fill_value=0)
+seattle_count = seattle_sentiment.groupby("year_month")["sentiment"].apply(lambda x: x.apply(pd.Series).stack().value_counts()).unstack(fill_value=0)
+dc_count = dc_sentiment.groupby("year_month")["sentiment"].apply(lambda x: x.apply(pd.Series).stack().value_counts()).unstack(fill_value=0)
+atlanta_count = atlanta_sentiment.groupby("year_month")["sentiment"].apply(lambda x: x.apply(pd.Series).stack().value_counts()).unstack(fill_value=0)
+# add a Subreddit column
+nyc_count['Subreddit'] = 'NYC'
+seattle_count['Subreddit'] = 'Seattle'
+dc_count['Subreddit'] = 'WashingtonDC'
+atlanta_count['Subreddit'] = 'Atlanta'
+# combine all the dataframes
+df_all = pd.concat([nyc_count, seattle_count, dc_count, atlanta_count])
+# rename the columns
+df_all.columns = ['Negative', 'Neutral', 'Positive','nan', 'Subreddit']
+# plot a bar chart with four different cities by year_month and positive sentiment counts and put four cities in one chart using facet_col
+facet_colors = {
+    'nyc': '#7DDF64',
+    'washingtondc': '#FAA916',
+    'Seattle': '#822E81',
+    'Atlanta': '#ED4D6E'
+}
+
+df_all['year_month'] = df_all.index.strftime('%Y-%m')
+fig = px.bar(df_all, x='year_month', y="Positive", title="Positive Sentiments by Month in Four Subreddits",
+                facet_col="Subreddit",
+                facet_col_wrap=2,
+                color='Subreddit',
+                color_discrete_map=facet_colors,
+                opacity=0.7, width=1000, height=400, template='plotly_white', 
+                labels={'year_month':'Time', 'Positive':'Positive Counts'})
+fig.update_yaxes(title_text='Positive Counts', col=1)
+fig.show()
+```
+
+The provided bar chart visualizes the monthly counts of positive sentiment within posts from four different subreddits cities, which are NYC, Seattle, WashingtonDC, and Atlanta, from January 2021 to March 2023. The trend for NYC displays a gentle decline in positive sentiment over time, while Seattle's sentiment fluctuates without a discernible long-term trend. WashingtonDC shows an overall upward trajectory in positivity, and Atlanta exhibits a slight decrease, with signs of stabilization towards the end of the period. Finally, during 2022 all subreddits had higher sentiment, which could be a reflection of post-covid opinions.This chart could serve to gauge the communal mood and engagement levels within these geographically-oriented online communities, potentially reflecting the impact of local or national events on public sentiment, such as covid.
+
+## Analyzing Sentiment Across Different Gentrification Topics
+
+Looking into sentiment over time gave us an idea of how overall sentiment for the posts from these cities changed over time, but didn't give us any idea about which topics these sentiments might be changing for. We wanted to do a deep dive into particular topics dealing with gentrification to see if they followed our intuition about whether these topics would be perceived negatively or positively. Given the nuances of classifying sentiment, we also looked extracted a few samples of posts that were classified with different sentiments to see whether we agreed with the classifications. 
+
+### Sentiments Around Housing
+
+The most obvious topic surrounding gentrification is housing. As mentioned in our introduction, the textbook definition of gentrification involves the increase of cost of housing. Using data from the United States Census Bureau, we were able to plot the distribution of rent prices over the course of 11 years. You can see through the visualization animations that every single city's rent distributions shift towards more expensive prices (e.g. the histograms more towards the right) over time. Although our Reddit data unfortunately does not cover the same amount of time, we also wanted to be able to also see change over time in sentiment. Surprisingly, the sentiments of Reddit posts about housing did not become more negative year to year for the dataset that we had. Instead, we see the percentage of Reddit posts that were classified as negative stay consistent throughout the time period of the dataset. This might be due to the fact that major rent increases occured between 2015 and 2019 (as shown by the graph below), and by the time 2021 occurred, rent distributions did not shift much afterwards. 
+
+Through extracting some of the post text which were classified as "positive," we can see that knowing additional context about housing in today's economy may suggest the post should actually be classified as "negative." For example:
+> *My lease is expiring this summer and I'm considering going month to month after it ends. My lease is for a so-called luxury apartment. Is there a limit to how much they can raise my rent if I choose to go month to month?\n\nI understand that due to the COVID moratorium they probably can't raise it much right now, but what is it looking like once that moratorium ends?*
+
+The NLP sentiment analysis performed in SparkNLP labeled this as a "positive" sentiment post, but I would classify this as a "negative" post gievn that the person needs to find housing because of their lease expiring and the eviction moritorium expiring. 
+
+```{python}
+data_dir = Path().absolute().parent.parent/"data"/"csv"
+rent_dollars_df = pd.read_csv(data_dir / "rent_in_dollars.csv")
+
+city_mappings = {'District of Columbia': 'washingtondc',
+                    'Fulton County': 'Atlanta',
+                    'New York County': 'nyc',
+                    'King County': 'Seattle'}
+
+facet_colors = {
+    'nyc': '#7DDF64',
+    'washingtondc': '#FAA916',
+    'Seattle': '#822E81',
+    'Atlanta': '#ED4D6E'
+}
+
+# clean rent data
+rent_dollars_df.loc[:,'year_num'] = rent_dollars_df.loc[:, 'Year'].apply(lambda x: str(x)[:4])
+rent_dollars_df = rent_dollars_df.rename({'Rent in USD': 'Median Rent in USD'}, axis = 'columns')
+rent_dollars_df.loc[:, 'City'] = rent_dollars_df.loc[:, 'County'].map(city_mappings)
+# last_rent_df = rent_dollars_df.loc[rent_dollars_df.year_num == rent_dollars_df.year_num.max()]
+
+facet_order = ['Atlanta', 'Seattle', 'nyc', 'washingtondc']
+
+sent_df = pd.read_csv(data_dir / "nlp_reddit_df.csv")
+sent_df.loc[:, 'sentiment_label'] = sent_df.loc[:, 'sentiment'].apply(lambda x: x[2:-2])
+sent_df = sent_df.loc[sent_df.sentiment_label != 'neutral', :]
+sent_df = sent_df.loc[sent_df.sentiment_label.fillna('') != '',  : ]
+
+housing_words = ['rent', 'housing', 'apartment', 'house', 'apt', 'real estate', 'section 8', 'landlord', 'duplex', 'studio', 'property', 'triplex']
+housing_words = '|'.join(housing_words)
+sent_df.loc[:, 'renting'] = (sent_df['title'].fillna('').str.lower() + sent_df['selftext'].fillna('').str.lower()).str.contains(rf'(?:(?<=\s)|(?<=\W)|^){housing_words}\b')
+sent_df = sent_df.rename({'renting': 'Post Mentions Housing'}, axis = 'columns')
+
+"""print("Number of Posts Mentioning Housing:")
+print(sent_df['Post Mentions Housing'].value_counts())"""
+value_counts_result = sent_df['Post Mentions Housing'].value_counts()
+sent_df_pd = pd.DataFrame({'Housing posts': value_counts_result.index, 'Count': value_counts_result.values})
+
+fig = go.Figure(data=[go.Table(
+    header=dict(values=list(sent_df_pd.columns),line_color='darkslategray',
+                fill_color='#d69f3c',
+                align='left'),
+    cells=dict(values=[sent_df_pd['Housing posts'], sent_df_pd['Count']],line_color='darkslategray',
+               fill_color='#f0d29c',
+               align='left')
+)])
+
+fig.update_layout(width=800, height=500)
+fig.update_layout(title='Number of Posts Mentioning Housing')
+fig.show()
+```
+
+```{python}
+
+sent_colors = {'pos': '#056517',
+    'neg': '#bf1029'}
+
+house_grouped_df = sent_df.groupby(['subreddit', 'year', 'Post Mentions Housing', 'sentiment_label']).size().reset_index(name = 'count')
+
+# turn into percentage
+house_grouped_df['percentage'] = house_grouped_df['count'] / house_grouped_df.groupby(['Post Mentions Housing', 'subreddit', 'year'])['count'].transform('sum')
+
+
+
+fig1 = px.histogram(
+    rent_dollars_df,
+    x='Median Rent in USD',
+    facet_col='City',
+    facet_col_wrap=4,
+    color='City',
+    height=400,
+    width=1000,
+    color_discrete_map=facet_colors,
+    category_orders={'City': facet_order, 'year_num': sorted(rent_dollars_df.year_num.unique())},
+    animation_frame='year_num',
+    template = 'plotly_white'
+).update_layout(
+    title={"text": "Distribution of Median Rent Prices of Each Census Block", "x": 0.5}, yaxis_title="# of Census Tracts"
+)
+
+
+fig2 = px.bar(
+    house_grouped_df.loc[house_grouped_df['Post Mentions Housing'], :],
+    x='sentiment_label',
+    y='percentage',
+    color='sentiment_label',
+    category_orders = {'sentiment_label': ['neg', 'pos', 'neutral']},
+    facet_col='subreddit',
+    title='Sentiment About Reddit Posts Mentioning Housing',
+    labels={'percentage': '% of Reddit Posts'},
+    color_discrete_map=sent_colors,
+    facet_col_spacing=0,
+    height=400,
+    width=1000,
+    template = 'plotly_white',
+    animation_frame='year'
+)
+
+# Show the figure
+fig1.show()
+fig2.show()
+```
+
+### Sentiments Around Walkability
+
+The next topic surrounding gentrification we wanted to look at was walkability. Our theory is that gentrification's association with tech culture and introduced forms of electronic transportation (e.g. e-bikes, e-scooters) tend to result in increased walkability. Using data from the Envrionmental Protection Agency, we were able to plot the distribution of walkability scores of each census tract within our chosen cities. We then compared this data to the changes in sentiment over time about walkability. Once again, the sentiments of Reddit posts about walkability did not become more negative year to year for the dataset that we had. Instead, we see the percentage of Reddit posts that were classified as negative stay consistent throughout the time period of the dataset. Washington, DC was the only city in which there was a higher proportion of negative comments than positive ones. This was surprising since the city's distribution of walkability scores tended to be higher than those of Atlanta or Seattle. This might be due to the fact that they experience more negative encounters while walking due to the sheer number of times they are outside. For example, one of the posts about walkability that was classified as negative was:
+
+> *A while ago my friend and I after exiting our usual metro station, I noticed she was being cat called by a group of men outside the station, they were saying the usual creepy stuff and weren’t being completely threatening but I could see it clearly made her uncomfortable. I’m a fairly new metro rider so could anyone else share some similar stories or solutions?*
+
+```{python}
+all_walk = pd.read_csv(data_dir / "EPA_SmartLocationDatabase_V3_Jan_2021_Final.csv")
+
+cities_include = ['New York-Newark, NY-NJ-CT-PA', 'Atlanta--Athens-Clarke County--Sandy Springs, GA-AL', 'Seattle-Tacoma, WA',
+                  'Washington-Baltimore-Arlington, DC-MD-VA-WV-PA']
+city_walk_map = {'New York-Newark, NY-NJ-CT-PA': 'nyc',
+                 'Atlanta--Athens-Clarke County--Sandy Springs, GA-AL':'Atlanta',
+                 'Seattle-Tacoma, WA': 'Seattle',
+                  'Washington-Baltimore-Arlington, DC-MD-VA-WV-PA': 'washingtondc'}
+city_walk = all_walk[all_walk['CSA_Name'].apply(lambda x: x in cities_include)]
+city_walk['City'] = city_walk['CSA_Name'].map(city_walk_map)
+city_walk = city_walk.rename({'NatWalkInd': 'Walkability Score'}, axis = 'columns')
+
+
+walking_words = ['bike', 'scooter', 'transit', 'metro', 'bus', 'pedestrian', 'parks', 'train']
+walking_words = '|'.join(walking_words)
+sent_df.loc[:, 'Post Mentions Walkability'] = (sent_df['title'].fillna('').str.lower() + sent_df['selftext'].fillna('').str.lower()).str.contains('walk')
+sent_df.loc[:, 'Post Mentions Walkability'] = sent_df.loc[:, 'Post Mentions Walkability'] | (sent_df['title'].fillna('').str.lower() + sent_df['selftext'].fillna('').str.lower()).str.contains(rf'(?:(?<=\s)|(?<=\W)|^){walking_words}\b')
+# sent_df.loc[:, 'Post Mentions Walkability'] = (sent_df['title'].fillna('').str.lower() + sent_df['selftext'].fillna('').str.lower()).str.contains('walk|bike|transit|metro|bus ')
+walk_grouped_df = sent_df.groupby(['subreddit', 'Post Mentions Walkability', 'year', 'sentiment_label']).size().reset_index(name = 'count')
+
+#print("Number of Posts Mentioning Walkability:\n", sent_df['Post Mentions Walkability'].value_counts())
+value_counts_result = sent_df['Post Mentions Walkability'].value_counts()
+sent_w_df_pd = pd.DataFrame({'Walkability posts': value_counts_result.index, 'Count': value_counts_result.values})
+
+fig = go.Figure(data=[go.Table(
+    header=dict(values=list(sent_w_df_pd.columns),line_color='darkslategray',
+                fill_color='#d69f3c',
+                align='left'),
+    cells=dict(values=[sent_w_df_pd['Walkability posts'], sent_w_df_pd['Count']],line_color='darkslategray',
+               fill_color='#f0d29c',
+               align='left')
+)])
+
+fig.update_layout(width=800, height=500)
+fig.update_layout(title='Number of Posts Mentioning Walkability')
+fig.show()
+```
+
+```{python}
+# turn into percentage
+walk_grouped_df['percentage'] = walk_grouped_df['count'] / walk_grouped_df.groupby(['Post Mentions Walkability', 'subreddit', 'year'])['count'].transform('sum')
+
+fig1 = px.histogram(
+    city_walk,
+    x='Walkability Score',
+    facet_col='City',
+    facet_col_wrap=4,
+    color='City',
+    height=300,
+    width=1000,
+    color_discrete_map=facet_colors,
+    category_orders={'City': facet_order},
+    template = 'plotly_white'
+).update_layout(
+    title={"text": "Distribution of Walkability Scores of Each Census Block", "x": 0.5}, yaxis_title="# of Census Tracts"
+)
+
+
+
+fig2 = px.bar(
+    walk_grouped_df[walk_grouped_df['Post Mentions Walkability']],
+    x='sentiment_label',
+    y='percentage',
+    color='sentiment_label',
+    category_orders = {'sentiment_label': ['neg', 'pos', 'neutral']},
+    facet_col='subreddit',
+    title='Sentiment About Posts Mentioning Walkability',
+    labels={'percentage': '% of Reddit Posts'},
+    color_discrete_map=sent_colors,
+    facet_col_spacing=0,
+    height=400,
+    width=1000,
+    template = 'plotly_white',
+    animation_frame='year'
+)
+
+fig1.show()
+fig2.show()
+```
+
+### Sentiments Around Tourism / Short-Term Rentals
+
+The last topic surrounding gentrification we wanted to look at was tourism / short-term rentals. Short-term rentals, like Airbnb, that tourists stay at have been accused at making housing crises in gentrified cities even worse due to taking up valuable living space that could be used by long-time residents. We were interested to see what the sentiment breakdowns would look like since on the one hand, long-term residents might have negative sentiment towards tourism, but on the other hand, the visitors themselves may post in these subreddits with positive sentiment. 
+
+What we saw is that posts about tourism were overwhelmingly classified as positive over negative. Surprisingly, New York has the highest proportion of positive over negative sentiments for tourism, with ~ 85% posts about tourism containing positive sentiment. Looking deeper into an example post, we can see that this is because upcoming tourists are generally excited to come visit to the city, as seen below:
+
+> *I’m coming to visit soon and want to know what local beers I should try to pick up while I’m there! I like all kinds, but generally go for hazy IPAs, sours, or stouts. Love trying anything unique or whatever is the local favorite. Thanks! \n\n (Obligatory disclaimer that I won’t be a dumb tourist - no bars, restaurants, etc only hiking and drinking at my airbnb:)*
+
+```{python}
+# data about rentals
+tourism_words = ['airbnb', 'vrbo', 'hotel', 'vacation', 'tourism', 'tourist', 'travel', 'bed and breakfast', 'sightsee', 'itinerary', 'short-term rental', 'visiting']
+tourism_words = '|'.join(tourism_words)
+sent_df.loc[:, 'Post Mentions Tourism'] = (sent_df['title'].fillna('').str.lower() + sent_df['selftext'].fillna('').str.lower()).str.contains(rf'(?:(?<=\s)|(?<=\W)|^){tourism_words}\b')
+#print("Number of Posts Mentioning Tourism:\n", sent_df.loc[:, 'Post Mentions Tourism'].value_counts())
+
+value_counts_result = sent_df['Post Mentions Tourism'].value_counts()
+sent_t_df_pd = pd.DataFrame({'Tourism posts': value_counts_result.index, 'Count': value_counts_result.values})
+
+fig = go.Figure(data=[go.Table(
+    header=dict(values=list(sent_t_df_pd.columns),line_color='darkslategray',
+                fill_color='#d69f3c',
+                align='left'),
+    cells=dict(values=[sent_t_df_pd['Tourism posts'], sent_t_df_pd['Count']],line_color='darkslategray',
+               fill_color='#f0d29c',
+               align='left')
+)])
+
+fig.update_layout(width=800, height=500)
+fig.update_layout(title='Number of Posts Mentioning Tourism')
+fig.show()
+```
+
+```{python}
+
+tourism_grouped_df = sent_df.groupby(['subreddit', 'Post Mentions Tourism', 'sentiment_label']).size().reset_index(name = 'count')
+
+# turn into percentage
+tourism_grouped_df['percentage'] = tourism_grouped_df['count'] / tourism_grouped_df.groupby(['Post Mentions Tourism', 'subreddit'])['count'].transform('sum')
+
+
+
+fig = px.bar(
+    tourism_grouped_df.loc[tourism_grouped_df['Post Mentions Tourism'], :],
+    x='sentiment_label',
+    y='percentage',
+    color='sentiment_label',
+    category_orders = {'sentiment_label': ['neg', 'pos', 'neutral']},
+    color_discrete_map=sent_colors,
+    facet_col='subreddit',
+    title='Sentiment About Posts Containing Tourism',
+    labels={'percentage': '% of Reddit Posts'},
+    facet_col_spacing=0,
+    height=400,
+    width=1000,
+    template = 'plotly_white'
+)
+
+# Show the figure
+fig.show()
+```
+
